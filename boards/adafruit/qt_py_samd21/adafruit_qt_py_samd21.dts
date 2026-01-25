@@ -1,0 +1,147 @@
+/*
+ * Copyright (c) 2026 The Zephyr Project Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+
+#include <atmel/samd21.dtsi>
+#include "adafruit_qt_py_samd21-pinctrl.dtsi"
+#include "seeed_xiao_connector.dtsi"
+#include <freq.h>
+#include <zephyr/dt-bindings/led/led.h>
+
+/ {
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,console = &sercom0;
+		zephyr,shell-uart = &sercom0;
+		zephyr,code-partition = &code_partition;
+	};
+
+	aliases {
+		led-strip = &ws2812;
+	};
+
+	stemma_connector: stemma_connector {
+		compatible = "stemma-qt-connector";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <0 0 &porta 16 0>,
+			   <1 0 &porta 17 0>;
+	};
+};
+
+&sram0 {
+	reg = <0x20000000 DT_SIZE_K(32)>;
+};
+
+&flash0 {
+	reg = <0x10000000 DT_SIZE_M(8)>;
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "uf2";
+			reg = <0x00000000 0x2000>;
+			read-only;
+		};
+
+		code_partition: partition@2000 {
+			label = "code";
+			reg = <0x2000 0x3A000>;
+			read-only;
+		};
+
+		/*
+		 * The final 16 KiB is reserved for the application.
+		 * Storage partition will be used by FCB/LittleFS/NVS
+		 * if enabled.
+		 */
+		storage_partition: partition@3c000 {
+			label = "storage";
+			reg = <0x0003c000 0x00004000>;
+		};
+	};
+};
+
+zephyr_udc0: &usb0 {
+	status = "okay";
+
+	pinctrl-0 = <&usb_dc_default>;
+	pinctrl-names = "default";
+};
+
+&porta {
+	status = "okay";
+
+	/*
+	 * Unlike some of the other Adafruit boards, the neopixel on this board has
+	 * its positive side hooked up to a GPIO pin rather than a positive voltage
+	 * rail to save on power. This will enable the LED on board initialization.
+	 */
+	neopixel-power-enable {
+		gpio-hog;
+		gpios = <15 GPIO_ACTIVE_HIGH>;
+		output-high;
+	};
+};
+
+&sercom0 {
+	status = "okay";
+	compatible = "atmel,sam0-uart";
+	current-speed = <115200>;
+	rxpo = <3>;
+	txpo = <1>;
+
+	pinctrl-0 = <&sercom0_uart0_default>;
+	pinctrl-names = "default";
+};
+
+zephyr_i2c: &sercom1 {
+	status = "okay";
+	compatible = "atmel,sam0-i2c";
+	pinctrl-0 = <&sercom1_i2c_default>;
+	pinctrl-names = "default";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+};
+
+zephyr_spi: &sercom2 {
+	status = "okay";
+	compatible = "atmel,sam0-spi";
+	pinctrl-0 = <&sercom2_spi_default>;
+	pinctrl-names = "default";
+	dipo = <0>;
+	dopo = <1>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+};
+
+&sercom3 {
+	status = "okay";
+	compatible = "atmel,sam0-spi";
+	pinctrl-0 = <&ws2812_sercom3_spi_default>;
+	pinctrl-names = "default";
+	dipo = <0>;
+	dopo = <1>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	ws2812: ws2812 {
+		status = "okay";
+		compatible = "worldsemi,ws2821-spi";
+	};
+};
+
+&adc {
+	status = "okay";
+	pinctrl-0 = <&adc_default>;
+	pinctrl-names = "default";
+};

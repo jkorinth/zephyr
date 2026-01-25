@@ -1,0 +1,5 @@
+# Copyright (c) 2026 The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_ADAFRUIT_QT_PY_SAMD21
+	select SOC_SAMD21E18A
