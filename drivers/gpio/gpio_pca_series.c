@@ -1509,11 +1509,6 @@ static void gpio_pca_series_interrupt_handler_standard(const struct device *dev,
 	int_fall = gpio_pca_series_reg_cache_mini_get(dev)->int_fall;
 #endif /* CONFIG_GPIO_PCA_SERIES_CACHE_ALL */
 
-	/** check if any interrupt enabled */
-	if ((!int_rise) && (!int_fall)) {
-		goto out;
-	}
-
 	/** read current input value, and clear status if reg is present */
 	ret = gpio_pca_series_reg_read(dev, PCA_REG_TYPE_1B_INPUT_PORT, (uint8_t *)&input);
 	if (ret) {
