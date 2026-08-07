@@ -76,7 +76,7 @@ const char *const gpio_pca_series_part_name[] = {
 enum gpio_pca_series_reg_type {			/** Type0 Type1 Type2 Type3 */
 	PCA_REG_TYPE_1B_INPUT_PORT = 0U,	/**   x     x     x     x   */
 	PCA_REG_TYPE_1B_OUTPUT_PORT,		/**   x     x     x     x   */
-/*  PCA_REG_TYPE_1B_POLARITY_INVERSION,		      x     x     x     x   * (unused, omitted) */
+        PCA_REG_TYPE_1B_POLARITY_INVERSION,	/**   x     x     x     x   */
 	PCA_REG_TYPE_1B_CONFIGURATION,		/**   x     x     x     x   */
 	PCA_REG_TYPE_2B_OUTPUT_DRIVE_STRENGTH,	/**         x           x   */
 	PCA_REG_TYPE_1B_INPUT_LATCH,		/**         x           x   */
@@ -106,7 +106,7 @@ enum gpio_pca_series_reg_type {			/** Type0 Type1 Type2 Type3 */
 const char *const gpio_pca_series_reg_name[] = {
 	"1b_input_port",
 	"1b_output_port",
-/*  "1b_polarity_inversion," */
+        "1b_polarity_inversion",
 	"1b_configuration",
 	"2b_output_drive_strength",
 	"1b_input_latch",
@@ -158,6 +158,7 @@ struct gpio_pca_series_config {
 	struct i2c_dt_spec i2c;           /* i2c bus dt spec */
 	const struct gpio_pca_series_part_config *part_cfg; /* config of part unmber */
 	struct gpio_dt_spec gpio_rst;                       /* device reset gpio */
+	uint16_t polinv_mask;             /* polarity inversion mask */
 #ifdef CONFIG_GPIO_PCA_SERIES_INTERRUPT
 	struct gpio_dt_spec gpio_int; /** device interrupt gpio */
 #endif /* CONFIG_GPIO_PCA_SERIES_INTERRUPT */
@@ -231,7 +232,7 @@ static inline uint32_t gpio_pca_series_reg_size_per_port(const struct device *de
 	switch (reg_type) {
 	case PCA_REG_TYPE_1B_INPUT_PORT:
 	case PCA_REG_TYPE_1B_OUTPUT_PORT:
-/*  case PCA_REG_TYPE_1B_POLARITY_INVERSION: */
+        case PCA_REG_TYPE_1B_POLARITY_INVERSION:
 	case PCA_REG_TYPE_1B_CONFIGURATION:
 	case PCA_REG_TYPE_1B_INPUT_LATCH:
 	case PCA_REG_TYPE_1B_PULL_ENABLE:
@@ -686,6 +687,7 @@ sw_rst:
 	 * No need to check return, as unsupported reg will return early with error
 	 */
 	gpio_pca_series_reg_write(dev, PCA_REG_TYPE_1B_OUTPUT_PORT, reset_value_1);
+	gpio_pca_series_reg_write(dev, PCA_REG_TYPE_1B_POLARITY_INVERSION, &cfg->polinv_mask);
 	gpio_pca_series_reg_write(dev, PCA_REG_TYPE_1B_CONFIGURATION, reset_value_1);
 	if (cfg->part_cfg->flags & PCA_HAS_LATCH) {
 		gpio_pca_series_reg_write(dev, PCA_REG_TYPE_2B_OUTPUT_DRIVE_STRENGTH,
@@ -1888,8 +1890,8 @@ out_bus:
 static const uint8_t gpio_pca_series_cache_map_pca953x[] = {
 	PCA_REG_INVALID, /** input_port if not PCA_HAS_OUT_CONFIG, non-cacheable */
 	0x00, /** output_port */
-/*	0x02,     polarity_inversion  (unused, omitted) */
-	0x01, /** configuration */
+	0x01, /** polarity_inversion */
+	0x02, /** configuration */
 	PCA_REG_INVALID, /** 2b_output_drive_strength if PCA_HAS_LATCH*/
 	PCA_REG_INVALID, /** input_latch if PCA_HAS_LATCH*/
 	PCA_REG_INVALID, /** pull_enable if PCA_HAS_PULL */
@@ -1904,9 +1906,9 @@ static const uint8_t gpio_pca_series_cache_map_pca953x[] = {
 	PCA_REG_INVALID, /** 2b_interrupt_edge if PCA_HAS_INT_EXTEND */
 	PCA_REG_INVALID, /** interrupt_clear if PCA_HAS_INT_EXTEND, non-cacheable */
 # ifdef CONFIG_GPIO_PCA_SERIES_CACHE_ALL
-	0x02, /** 1b_input_history if PCA_HAS_LATCH and not PCA_HAS_INT_EXTEND */
-	0x03, /** 1b_interrupt_rise if PCA_HAS_LATCH and not PCA_HAS_INT_EXTEND */
-	0x04, /** 1b_interrupt_fall if PCA_HAS_LATCH and not PCA_HAS_INT_EXTEND */
+	0x03, /** 1b_input_history if PCA_HAS_LATCH and not PCA_HAS_INT_EXTEND */
+	0x04, /** 1b_interrupt_rise if PCA_HAS_LATCH and not PCA_HAS_INT_EXTEND */
+	0x05, /** 1b_interrupt_fall if PCA_HAS_LATCH and not PCA_HAS_INT_EXTEND */
 # endif /* CONFIG_GPIO_PCA_SERIES_CACHE_ALL */
 #endif /* CONFIG_GPIO_PCA_SERIES_INTERRUPT */
 };
@@ -1979,7 +1981,7 @@ const struct gpio_pca_series_part_config gpio_pca_series_part_cfg_pca9554 = {
 static const uint8_t gpio_pca_series_reg_pca9539[] = {
 	0x00, /** input_port if not PCA_HAS_OUT_CONFIG, non-cacheable */
 	0x02, /** output_port */
-/*	0x04,     polarity_inversion  (unused, omitted) */
+	0x04, /** polarity_inversion */
 	0x06, /** configuration */
 	PCA_REG_INVALID, /** 2b_output_drive_strength if PCA_HAS_LATCH*/
 	PCA_REG_INVALID, /** input_latch if PCA_HAS_LATCH*/
@@ -2187,6 +2189,7 @@ const struct gpio_pca_series_part_config gpio_pca_series_part_cfg_pcal6534 = {
 		.i2c = I2C_DT_SPEC_INST_GET(inst), \
 		.part_cfg = GPIO_PCA_GET_PART_CFG_BY_PART_NO(part_no), \
 		.gpio_rst = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {}), \
+		.polinv_mask = DT_INST_PROP(inst, polinv_mask), \
 		IF_ENABLED(CONFIG_GPIO_PCA_SERIES_INTERRUPT, \
 			(.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {}),)) \
 	}; \

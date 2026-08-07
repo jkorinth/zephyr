@@ -39,6 +39,13 @@ properties:
   "#gpio-cells":
     const: 2
 
+  polinv-mask:
+    type: int
+    default: 0
+    description:
+      16b mask field controlling polarity inversion of
+      the pins p1.7..p0.0.
+
 gpio-cells:
   - pin
   - flags
